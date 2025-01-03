@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/utils/supabase';
 
 const RegistrationModal = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [formData, setFormData] = useState({
     // Personal Info
     fullName: '',
@@ -106,6 +108,15 @@ const RegistrationModal = ({ isOpen, onClose }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const checkEmailExists = async (email) => {
+    const { data, error } = await supabase
+      .from('registrations')
+      .select('email')
+      .eq('email', email.toLowerCase().trim());
+    
+    return data && data.length > 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateStep(step)) return;
@@ -117,13 +128,48 @@ const RegistrationModal = ({ isOpen, onClose }) => {
 
     setIsSubmitting(true);
     try {
-      // Here you would typically send the data to your backend
-      console.log('Form submitted:', formData);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      onClose();
+      // Check if email already exists
+      const emailExists = await checkEmailExists(formData.email);
+      if (emailExists) {
+        setErrors(prev => ({
+          ...prev,
+          email: 'This email is already registered'
+        }));
+        setStep(1); // Go back to first step
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('registrations')
+        .insert([
+          {
+            full_name: formData.fullName,
+            email: formData.email.toLowerCase().trim(),
+            year_of_study: formData.yearOfStudy,
+            has_team: formData.hasTeam,
+            team_name: formData.teamName,
+            team_members: [
+              formData.teamMember1,
+              formData.teamMember2,
+              formData.teamMember3
+            ].filter(Boolean),
+            experience_level: formData.experience,
+            skills: formData.skills,
+            other_skills: formData.otherSkills,
+            additional_notes: formData.additionalNotes,
+            status: 'pending',
+            registered_at: new Date().toISOString()
+          }
+        ]);
+
+      if (error) throw error;
+
+      // Show success UI instead of alert
+      setIsSuccess(true);
     } catch (error) {
-      console.error('Submission error:', error);
+      console.error('Registration error:', error);
+      alert('There was an error submitting your registration. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -169,7 +215,7 @@ const RegistrationModal = ({ isOpen, onClose }) => {
       >
         Previous
       </button>
-      <button
+        <button 
         type="submit"
         disabled={isSubmitting}
         className={`
@@ -183,13 +229,13 @@ const RegistrationModal = ({ isOpen, onClose }) => {
             <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
+          </svg>
             <span>Submitting...</span>
           </>
         ) : (
           <span>{step === 4 ? 'Submit' : 'Next'}</span>
         )}
-      </button>
+        </button>
     </div>
   );
 
@@ -200,41 +246,41 @@ const RegistrationModal = ({ isOpen, onClose }) => {
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-white">Personal Information</h3>
             <div className="space-y-4">
-              <div>
+          <div>
                 <label className="block text-sm font-medium text-white/60 mb-1">Full Name</label>
-                <input
-                  type="text"
+            <input
+              type="text"
                   name="fullName"
                   value={formData.fullName}
-                  onChange={handleChange}
+              onChange={handleChange}
                   className={inputClasses(errors.fullName)}
                   placeholder="Enter your full name"
-                  required
-                />
+              required
+            />
                 <ErrorMessage error={errors.fullName} />
-              </div>
-              <div>
+          </div>
+          <div>
                 <label className="block text-sm font-medium text-white/60 mb-1">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
                   placeholder="your.email@mail.com"
                   className={inputClasses(errors.email)}
-                  required
-                />
+              required
+            />
                 <ErrorMessage error={errors.email} />
-              </div>
-              <div>
+          </div>
+          <div>
                 <label className="block text-sm font-medium text-white/60 mb-1">Year of Study</label>
                 <div className="relative">
                   <select
                     name="yearOfStudy"
                     value={formData.yearOfStudy}
-                    onChange={handleChange}
+              onChange={handleChange}
                     className={selectClasses(errors.yearOfStudy)}
-                    required
+              required
                   >
                     <option value="" className="text-white/60">Select year</option>
                     {yearOptions.map(year => (
@@ -257,21 +303,21 @@ const RegistrationModal = ({ isOpen, onClose }) => {
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-white">Team Information</h3>
             <div className="space-y-4">
-              <div>
+          <div>
                 <label className="block text-sm font-medium text-white/60 mb-1">Do you have a team?</label>
                 <div className="relative">
-                  <select
+            <select
                     name="hasTeam"
                     value={formData.hasTeam}
-                    onChange={handleChange}
+              onChange={handleChange}
                     className={selectClasses(errors.hasTeam)}
-                    required
-                  >
+              required
+            >
                     <option value="" className="text-white/60">Select option</option>
                     <option value="yes" className="text-white">Yes, I have a team</option>
                     <option value="no" className="text-white">No, I want to join a team</option>
                     <option value="form" className="text-white">No, I want to form a new team</option>
-                  </select>
+            </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                     <svg className="w-5 h-5 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -333,21 +379,21 @@ const RegistrationModal = ({ isOpen, onClose }) => {
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-white">Technical Background</h3>
             <div className="space-y-4">
-              <div>
+          <div>
                 <label className="block text-sm font-medium text-white/60 mb-1">Programming Experience</label>
                 <div className="relative">
-                  <select
-                    name="experience"
-                    value={formData.experience}
-                    onChange={handleChange}
+            <select
+              name="experience"
+              value={formData.experience}
+              onChange={handleChange}
                     className={selectClasses(errors.experience)}
-                    required
-                  >
+              required
+            >
                     <option value="" className="text-white/60">Select experience</option>
                     <option value="beginner" className="text-white">Beginner ({"<"} 1 year)</option>
                     <option value="intermediate" className="text-white">Intermediate (1-2 years)</option>
                     <option value="advanced" className="text-white">Advanced (2+ years)</option>
-                  </select>
+            </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                     <svg className="w-5 h-5 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -398,12 +444,12 @@ const RegistrationModal = ({ isOpen, onClose }) => {
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-white">Additional Information</h3>
             <div className="space-y-4">
-              <div>
+          <div>
                 <label className="block text-sm font-medium text-white/60 mb-1">Additional Notes</label>
-                <textarea
+            <textarea
                   name="additionalNotes"
                   value={formData.additionalNotes}
-                  onChange={handleChange}
+              onChange={handleChange}
                   className={inputClasses(errors.additionalNotes)}
                   placeholder="Tell us anything else you'd like us to know about you or your participation in the hackathon..."
                 />
@@ -416,6 +462,58 @@ const RegistrationModal = ({ isOpen, onClose }) => {
         return null;
     }
   };
+
+  const renderSuccess = () => (
+    <div className="px-6 py-12 text-center">
+      <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg className="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <h3 className="text-2xl font-semibold text-white mb-2">Registration Successful!</h3>
+      <p className="text-white/60 mb-8">
+        Thank you for registering for DevImpact Hackathon. We'll review your application and get back to you soon.
+      </p>
+      <div className="space-y-4">
+        <div className="bg-white/5 rounded-lg p-4">
+          <p className="text-sm text-white/80">
+            <span className="text-white/60">Registration Status:</span> Pending Review
+          </p>
+        </div>
+        <div className="bg-white/5 rounded-lg p-4">
+          <p className="text-sm text-white/80">
+            <span className="text-white/60">Next Steps:</span>
+          </p>
+          <ul className="mt-2 space-y-2 text-sm text-white/80">
+            <li className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Check your email for updates
+            </li>
+            <li className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Join our Discord community
+            </li>
+            <li className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Start preparing for the hackathon
+            </li>
+          </ul>
+        </div>
+      </div>
+      <button
+        onClick={onClose}
+        className="mt-8 px-6 py-2 bg-emerald-500/90 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-all"
+      >
+        Close
+      </button>
+    </div>
+  );
 
   if (!isOpen) return null;
 
@@ -432,7 +530,9 @@ const RegistrationModal = ({ isOpen, onClose }) => {
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white">Join the Challenge</h2>
+            <h2 className="text-xl font-semibold text-white">
+              {isSuccess ? 'Registration Complete' : 'Join the Challenge'}
+            </h2>
             <button
               onClick={onClose}
               className="p-2 rounded-full hover:bg-white/5 text-white/60 hover:text-white transition-colors"
@@ -442,24 +542,25 @@ const RegistrationModal = ({ isOpen, onClose }) => {
               </svg>
             </button>
           </div>
-          {/* Progress bar */}
-          <div className="mt-4 h-1 bg-white/5 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-emerald-500 transition-all duration-300"
-              style={{ width: `${(step / 4) * 100}%` }}
-            />
-          </div>
+          {!isSuccess && (
+            <div className="mt-4 h-1 bg-white/5 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-emerald-500 transition-all duration-300"
+                style={{ width: `${(step / 4) * 100}%` }}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit}>
-          <div className="px-6 py-6 max-h-[calc(100vh-16rem)] overflow-y-auto custom-scrollbar">
-            {renderStep()}
-          </div>
-
-          {/* Footer */}
-          {renderFormButtons()}
-        </form>
+        {/* Content */}
+        {isSuccess ? renderSuccess() : (
+          <form onSubmit={handleSubmit}>
+            <div className="px-6 py-6 max-h-[calc(100vh-16rem)] overflow-y-auto custom-scrollbar">
+              {renderStep()}
+            </div>
+            {renderFormButtons()}
+          </form>
+        )}
       </div>
     </div>
   );

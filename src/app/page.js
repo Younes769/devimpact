@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Hero from '@/components/Hero';
 import About from '@/components/About';
 import Stats from '@/components/Stats';
@@ -11,22 +11,9 @@ import RegistrationModal from '@/components/RegistrationModal';
 import ParticlesBackground from '@/components/ParticlesBackground';
 import Countdown from '@/components/Countdown';
 import Sponsors from '@/components/Sponsors';
-import LoadingScreen from '@/components/LoadingScreen';
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Check if environment variables are loaded
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      setIsLoading(false);
-    }
-  }, []);
-
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
 
   return (
     <>
